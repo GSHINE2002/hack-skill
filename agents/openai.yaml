@@ -1,0 +1,4 @@
+interface:
+  display_name: "Hack 安全测试"
+  short_description: "一键扫描网站漏洞、启动 CDP 调试、抓包生成 API 客户端"
+  default_prompt: "帮我扫描这个网站的安全漏洞"

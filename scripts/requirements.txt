@@ -1,0 +1,27 @@
+# Hack Skill — Python Dependencies
+# Install: pip install -r requirements.txt
+
+# ZAP Python API
+python-owasp-zap-v2.4~=0.0.21
+
+# NOTE: httpx is intentionally excluded — all HTTP requests MUST go through CDP (Playwright).
+# requests is only kept as a fallback for _quick_recon_requests() when CDP is unavailable.
+requests~=2.31.0
+
+# Browser automation
+playwright~=1.40.0
+
+# Stealth mode (CDP WebSocket daemon for anti-detect JS injection)
+websockets~=12.0
+
+# Authenticated API replay (web/desktop)
+# mimic-client is installed from source, not PyPI:
+#   pip install -e /path/to/mimic
+# Or: uv tool install mimic-client
+
+# AI Fuzzer — optional LLM integration for adaptive payload generation
+# Set OPENAI_API_KEY env var to enable AI-generated payloads
+openai~=1.0.0
+
+# Utilities
+urllib3~=2.0.0

@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import ctypes
 import glob
 import os
 import shutil
@@ -88,6 +89,7 @@ def build_chrome_args(port: int, user_data_dir: str, url: str = None,
     args = [
         f"--user-data-dir={user_data_dir}",
         f"--remote-debugging-port={port}",
+        "--start-maximized",
         "--disable-web-security",
         "--disable-site-isolation-trials",
         "--disable-features=SameSiteByDefaultCookies,CookiesWithoutSameSiteMustBeSecure,PrivacySandboxSettings4,AutomationControlled",
@@ -177,6 +179,9 @@ def launch_cdp(port: int = 9222, url: str = None, proxy: str = None,
         print("    Check if another Chrome instance is using the same profile.")
         return proc
 
+    # Bring Chrome window to foreground (Windows)
+    _bring_window_to_foreground()
+
     # Start stealth daemon if requested
     if stealth:
         try:
@@ -190,6 +195,38 @@ def launch_cdp(port: int = 9222, url: str = None, proxy: str = None,
             print(f"[!] Stealth daemon failed to start: {e}")
 
     return proc
+
+
+def _bring_window_to_foreground():
+    """Bring the most recent Chrome window to the foreground (Windows only)."""
+    if sys.platform != "win32":
+        return
+    try:
+        user32 = ctypes.windll.user32
+        # Enumerate all windows, find Chrome's main window, bring to front
+        # Use FindWindow approach as a quick fallback
+        hwnd = user32.FindWindowW(None, "Chrome")
+        if hwnd:
+            # Restore if minimized, then bring to front
+            user32.ShowWindow(hwnd, 9)  # SW_RESTORE
+            user32.SetForegroundWindow(hwnd)
+            return
+        # Fallback: enumerate windows to find chrome.exe
+        import subprocess as sp
+        result = sp.run(
+            ["powershell", "-Command",
+             "(Get-Process chrome -ErrorAction SilentlyContinue | "
+             "Where-Object { $_.MainWindowHandle -ne 0 } | "
+             "Select-Object -First 1).MainWindowHandle"],
+            capture_output=True, text=True, timeout=5
+        )
+        hwnd_str = result.stdout.strip()
+        if hwnd_str:
+            hwnd = int(hwnd_str)
+            user32.ShowWindow(hwnd, 9)
+            user32.SetForegroundWindow(hwnd)
+    except Exception:
+        pass
 
 
 def is_cdp_running(port: int = 9222) -> bool:

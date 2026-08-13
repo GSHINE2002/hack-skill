@@ -158,15 +158,11 @@ def launch_cdp(port: int = 9222, url: str = None, proxy: str = None,
     if stealth:
         print(f"    Stealth:    ON (anti-detect JS injection)")
 
-    creationflags = 0
-    if sys.platform == "win32":
-        creationflags = subprocess.CREATE_NEW_PROCESS_GROUP | 0x00000008  # DETACHED_PROCESS
-
     proc = subprocess.Popen(
         [chrome_exe] + args,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
-        creationflags=creationflags,
+        creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if sys.platform == "win32" else 0,
     )
 
     # Wait for CDP to be ready
@@ -207,20 +203,28 @@ def _bring_window_to_foreground():
         return
     try:
         user32 = ctypes.windll.user32
-        # Find window by class name 'Chrome_WidgetWin_1'
-        hwnd = user32.FindWindowW("Chrome_WidgetWin_1", None)
+        # Enumerate all windows, find Chrome's main window, bring to front
+        # Use FindWindow approach as a quick fallback
+        hwnd = user32.FindWindowW(None, "Chrome")
         if hwnd:
+            # Restore if minimized, then bring to front
             user32.ShowWindow(hwnd, 9)  # SW_RESTORE
             user32.SetForegroundWindow(hwnd)
-            if hasattr(user32, "SwitchToThisWindow"):
-                user32.SwitchToThisWindow(hwnd, True)
             return
-        # Fallback: WScript.Shell AppActivate
+        # Fallback: enumerate windows to find chrome.exe
         import subprocess as sp
-        sp.run(
-            ["powershell", "-Command", "(New-Object -ComObject WScript.Shell).AppActivate('Chrome')"],
-            capture_output=True, timeout=5
+        result = sp.run(
+            ["powershell", "-Command",
+             "(Get-Process chrome -ErrorAction SilentlyContinue | "
+             "Where-Object { $_.MainWindowHandle -ne 0 } | "
+             "Select-Object -First 1).MainWindowHandle"],
+            capture_output=True, text=True, timeout=5
         )
+        hwnd_str = result.stdout.strip()
+        if hwnd_str:
+            hwnd = int(hwnd_str)
+            user32.ShowWindow(hwnd, 9)
+            user32.SetForegroundWindow(hwnd)
     except Exception:
         pass
 

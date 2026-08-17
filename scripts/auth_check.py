@@ -1,20 +1,41 @@
 from __future__ import annotations
 import argparse, asyncio, hashlib, sys
+from pathlib import Path
 from typing import Any, Callable
 
-# 最高级操作员令牌密钥 — 固定不变
-MASTER_SECRET = "mycatnameisbubu2026"
+_SCRIPT_DIR = Path(__file__).parent
+_SECRET_FILE = _SCRIPT_DIR / ".master_secret"
+
+
+def _load_secret() -> str:
+    """从外部文件加载密钥，避免硬编码在代码中。"""
+    if _SECRET_FILE.exists():
+        return _SECRET_FILE.read_text().strip()
+    # Fallback: 如果文件不存在，返回空字符串（校验必定失败）
+    return ""
+
+
+def _get_secret() -> str:
+    """缓存读取，避免重复 IO。"""
+    if not hasattr(_get_secret, "_cached"):
+        _get_secret._cached = _load_secret()
+    return _get_secret._cached
 
 
 def generate_token(target: str) -> str:
-    """基于目标域名 + 固定密钥生成当日令牌"""
-    raw = f"{target}:{MASTER_SECRET}"
+    """基于目标域名 + 密钥生成令牌"""
+    secret = _get_secret()
+    if not secret:
+        return ""
+    raw = f"{target}:{secret}"
     return hashlib.sha256(raw.encode()).hexdigest()[:16]
 
 
 def verify_token(target: str, token: str) -> bool:
     """校验令牌是否匹配"""
     expected = generate_token(target)
+    if not expected:
+        return False
     return token.lower() == expected.lower()
 
 

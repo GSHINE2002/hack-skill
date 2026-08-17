@@ -354,9 +354,17 @@ Examples:
     parser.add_argument("--passive-wait", type=int, default=30,
                        help="Seconds to wait for passive scan (default: 30)")
     parser.add_argument("--spider-depth", type=int, default=5,
-                       help="Spider max depth (default: 5)")
+                        help="Spider max depth (default: 5)")
+
+    from auth_check import add_auth_args, check_auth
+    add_auth_args(parser)
 
     args = parser.parse_args()
+
+    auth_result = check_auth(args, args.url)
+    if not auth_result.authorized:
+        print(f"\n[ERROR] {auth_result.fail()}")
+        sys.exit(1)
 
     target = normalize_url(args.url)
     print(f"[*] Target: {target}")

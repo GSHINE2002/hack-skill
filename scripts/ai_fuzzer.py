@@ -615,7 +615,15 @@ Examples:
     parser.add_argument("--cdp-port", type=int, default=9222, help="CDP 端口")
     parser.add_argument("--output", help="JSON 结果输出文件")
 
+    from auth_check import add_auth_args, check_auth
+    add_auth_args(parser)
+
     args = parser.parse_args()
+
+    auth_result = check_auth(args, args.target)
+    if not auth_result.authorized:
+        print(f"\n[ERROR] {auth_result.fail()}")
+        sys.exit(1)
 
     fuzzer = AdaptiveFuzzer(
         target=args.target,

@@ -369,7 +369,15 @@ Examples:
     parser.add_argument("--auth-audit", action="store_true", help="仅认证审计")
     parser.add_argument("--recon-only", action="store_true", help="仅侦察")
 
+    from auth_check import add_auth_args, check_auth
+    add_auth_args(parser)
+
     args = parser.parse_args()
+
+    auth_result = check_auth(args, args.target)
+    if not auth_result.authorized:
+        print(f"\n[ERROR] {auth_result.fail()}")
+        sys.exit(1)
 
     # 确定执行阶段
     phases = []

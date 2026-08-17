@@ -442,7 +442,16 @@ Examples:
     parser.add_argument("--status", action="store_true", help="Check if CDP is running")
     parser.add_argument("--info", action="store_true", help="Show CDP connection details")
 
+    from auth_check import add_auth_args, check_auth
+    add_auth_args(parser)
+
     args = parser.parse_args()
+
+    if args.url:
+        auth_result = check_auth(args, args.url)
+        if not auth_result.authorized:
+            print(f"\n[ERROR] {auth_result.fail()}")
+            sys.exit(1)
 
     if args.status:
         if is_cdp_running(args.port):
